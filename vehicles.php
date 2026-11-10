@@ -1,7 +1,7 @@
 
 <?php
 session_start();
-include 'database.php';
+include 'DatabaseConnection.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -14,7 +14,7 @@ if (isset($_POST['add_vehicle'])) {
     $model = $_POST['model'];
     $year = $_POST['year'];
     $odometer = $_POST['odometer'];
-    <th>Action</th>
+   
 
     $stmt = $conn->prepare("INSERT INTO vehicles (plate_number, make, model, year, odometer) VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param("sssii", $plate, $make, $model, $year, $odometer);
@@ -32,8 +32,9 @@ $result = $conn->query("SELECT * FROM vehicles ORDER BY vehicle_id DESC");
 <!DOCTYPE html>
 <html>
 <head>
+    <th>Action</th>
     <title>Vehicle Management</title>
-    <link rel="stylesheet" href="css/style.css">
+ <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
