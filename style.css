@@ -73,3 +73,38 @@ body {
     font-weight: bold;
     color: #1e293b;
 }
+
+
+input {
+    padding: 10px;
+    margin: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+button {
+    padding: 10px 20px;
+    background: #1e293b;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #334155;
+}
+
+table {
+    border-collapse: collapse;
+    background: white;
+}
+
+th {
+    background: #1e293b;
+    color: white;
+}
+
+td, th {
+    text-align: left;
+}
