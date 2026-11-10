@@ -27,3 +27,5 @@ if (isset($_POST['register'])) {
     <input type="password" name="password" placeholder="Password" required><br><br>
     <button type="submit" name="register">Register</button>
 </form>
+
+<p>Already have an account? <a href="login.php">Login</a></p>

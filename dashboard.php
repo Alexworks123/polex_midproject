@@ -1,3 +1,4 @@
+
 <?php
 session_start();
 
@@ -11,21 +12,54 @@ if (!isset($_SESSION['user_id'])) {
 <html>
 <head>
     <title>Vehicle Maintenance Dashboard</title>
+   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h1>Vehicle Maintenance System</h1>
+<div class="sidebar">
+    <h2>Vehicle Maintenance</h2>
 
-    <h2>Welcome, <?php echo htmlspecialchars($_SESSION['name']); ?>!</h2>
-
-    <p>You are logged in as an Operator.</p>
-
-    <hr>
-
-    <h3>Dashboard</h3>
-    <p>Welcome to the Vehicle Preventive Maintenance and Service Management System.</p>
-
+    <a href="dashboard.php" class="active">Dashboard</a>
+    <a href="vehicles.php">Vehicles</a>
+    <a href="mechanics.php">Mechanics</a>
+    <a href="services.php">Service Jobs</a>
+    <a href="parts.php">Parts</a>
+    <a href="maintenance.php">Maintenance</a>
     <a href="logout.php">Logout</a>
+</div>
+
+<div class="main">
+
+    <div class="header">
+        <h2>Welcome, <?php echo htmlspecialchars($_SESSION['name']); ?>!</h2>
+        <p>Operator Dashboard</p>
+    </div>
+
+    <div class="cards">
+
+        <div class="card">
+            <h3>Total Vehicles</h3>
+            <p>0</p>
+        </div>
+
+        <div class="card">
+            <h3>Total Mechanics</h3>
+            <p>0</p>
+        </div>
+
+        <div class="card">
+            <h3>Service Jobs</h3>
+            <p>0</p>
+        </div>
+
+        <div class="card">
+            <h3>Due Maintenance</h3>
+            <p>0</p>
+        </div>
+
+    </div>
+
+</div>
 
 </body>
 </html>
