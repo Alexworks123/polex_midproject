@@ -14,6 +14,7 @@ if (isset($_POST['add_vehicle'])) {
     $model = $_POST['model'];
     $year = $_POST['year'];
     $odometer = $_POST['odometer'];
+    <th>Action</th>
 
     $stmt = $conn->prepare("INSERT INTO vehicles (plate_number, make, model, year, odometer) VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param("sssii", $plate, $make, $model, $year, $odometer);
@@ -93,6 +94,9 @@ $result = $conn->query("SELECT * FROM vehicles ORDER BY vehicle_id DESC");
                 <td><?php echo htmlspecialchars($row['model']); ?></td>
                 <td><?php echo htmlspecialchars($row['year'] ?? ''); ?></td>
                 <td><?php echo number_format($row['odometer']); ?> km</td>
+                <td>
+    <a href="edit_vehicle.php?id=<?php echo $row['vehicle_id']; ?>">Edit</a>
+</td>
             </tr>
             <?php } ?>
         </table>
