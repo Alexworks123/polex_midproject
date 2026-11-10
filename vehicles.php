@@ -98,6 +98,17 @@ $result = $conn->query("SELECT * FROM vehicles ORDER BY vehicle_id DESC");
                 <td>
     <a href="edit_vehicle.php?id=<?php echo $row['vehicle_id']; ?>">Edit</a>
 </td>
+
+<form method="POST" action="delete_vehicle.php"
+      onsubmit="return confirm('Are you sure you want to delete this vehicle?');">
+
+    <input type="hidden" name="vehicle_id"
+           value="<?php echo $row['vehicle_id']; ?>">
+
+    <button type="submit" name="delete">Delete</button>
+
+</form>
+
             </tr>
             <?php } ?>
         </table>
