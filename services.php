@@ -7,13 +7,36 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+$error = "";
+$success = "";
+
+// DELETE SERVICE JOB
+if (isset($_POST['delete_service'])) {
+    $job_id = (int) $_POST['job_id'];
+
+    $stmt = $conn->prepare("DELETE FROM service_jobs WHERE job_id = ?");
+    $stmt->bind_param("i", $job_id);
+
+    if ($stmt->execute()) {
+        header("Location: services.php?deleted=1");
+        exit();
+    } else {
+        $error = "Failed to delete service job.";
+    }
+}
+
+if (isset($_GET['deleted'])) {
+    $success = "Service job deleted successfully!";
+}
+
+// ADD SERVICE JOB
 if (isset($_POST['add_service'])) {
-    $vehicle_id = $_POST['vehicle_id'];
-    $mechanic_id = $_POST['mechanic_id'];
+    $vehicle_id = (int) $_POST['vehicle_id'];
+    $mechanic_id = (int) $_POST['mechanic_id'];
     $service_date = $_POST['service_date'];
-    $odometer = $_POST['odometer'];
-    $service_type = $_POST['service_type'];
-    $description = $_POST['description'];
+    $odometer = (int) $_POST['odometer'];
+    $service_type = trim($_POST['service_type']);
+    $description = trim($_POST['description']);
     $status = $_POST['status'];
 
     $stmt = $conn->prepare("INSERT INTO service_jobs 
@@ -21,7 +44,7 @@ if (isset($_POST['add_service'])) {
         VALUES (?, ?, ?, ?, ?, ?, ?)");
 
     $stmt->bind_param(
-        "iisisss",
+        "iiissss",
         $vehicle_id,
         $mechanic_id,
         $service_date,
@@ -32,11 +55,15 @@ if (isset($_POST['add_service'])) {
     );
 
     if ($stmt->execute()) {
-        header("Location: services.php");
+        header("Location: services.php?success=1");
         exit();
     } else {
         $error = "Failed to add service job.";
     }
+}
+
+if (isset($_GET['success'])) {
+    $success = "Service job added successfully!";
 }
 
 $vehicles = $conn->query("SELECT * FROM vehicles");
@@ -65,7 +92,7 @@ $services = $conn->query("
     <a href="dashboard.php">Dashboard</a>
     <a href="vehicles.php">Vehicles</a>
     <a href="mechanics.php">Mechanics</a>
-    <a href="services.php">Service Jobs</a>
+    <a href="services.php" class="active">Service Jobs</a>
     <a href="parts.php">Parts</a>
     <a href="maintenance.php">Maintenance</a>
     <a href="logout.php">Logout</a>
@@ -74,13 +101,18 @@ $services = $conn->query("
 <div class="main">
     <h1>Service Job Management</h1>
 
-    <h2>Add Service Job</h2>
+    <?php if ($error != "") { ?>
+        <p style="color: red;"><?php echo htmlspecialchars($error); ?></p>
+    <?php } ?>
 
-    <?php if (isset($error)) echo "<p>$error</p>"; ?>
+    <?php if ($success != "") { ?>
+        <p style="color: green;"><?php echo htmlspecialchars($success); ?></p>
+    <?php } ?>
+
+    <h2>Add Service Job</h2>
 
     <?php if ($vehicles->num_rows > 0 && $mechanics->num_rows > 0) { ?>
     <form method="POST">
-
         <select name="vehicle_id" required>
             <option value="">Select Vehicle</option>
             <?php while ($v = $vehicles->fetch_assoc()) { ?>
@@ -118,7 +150,7 @@ $services = $conn->query("
 
     <h2>Service Job Records</h2>
 
-    <table>
+    <table width="100%" border="1" cellpadding="10">
         <tr>
             <th>ID</th>
             <th>Vehicle</th>
@@ -127,6 +159,7 @@ $services = $conn->query("
             <th>Odometer</th>
             <th>Service Type</th>
             <th>Status</th>
+            <th>Action</th>
         </tr>
 
         <?php while ($row = $services->fetch_assoc()) { ?>
@@ -138,6 +171,18 @@ $services = $conn->query("
             <td><?php echo $row['odometer']; ?></td>
             <td><?php echo htmlspecialchars($row['service_type']); ?></td>
             <td><?php echo htmlspecialchars($row['status']); ?></td>
+            <td>
+                <a href="edit_service.php?id=<?php echo $row['job_id']; ?>" style="margin-right: 10px;">Edit</a>
+
+                <form method="POST" style="display:inline;"
+                    onsubmit="return confirm('Are you sure you want to delete this service job?');">
+                    <input type="hidden" name="job_id" value="<?php echo $row['job_id']; ?>">
+                    <button type="submit" name="delete_service"
+                        style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer;">
+                        Delete
+                    </button>
+                </form>
+            </td>
         </tr>
         <?php } ?>
     </table>

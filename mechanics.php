@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 include 'DatabaseConnection.php';
@@ -8,17 +7,43 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-if (isset($_POST['add_mechanic'])) {
-    $name = $_POST['name'];
-    $phone = $_POST['phone'];
+$message = "";
 
-    $stmt = $conn->prepare("INSERT INTO mechanics (name, phone) VALUES (?, ?)");
-    $stmt->bind_param("ss", $name, $phone);
+// DELETE MECHANIC
+if (isset($_POST['delete_mechanic'])) {
+    $mechanic_id = (int) $_POST['mechanic_id'];
+
+    $stmt = $conn->prepare("DELETE FROM mechanics WHERE mechanic_id = ?");
+    $stmt->bind_param("i", $mechanic_id);
 
     if ($stmt->execute()) {
-        $message = "Mechanic added successfully!";
+        header("Location: mechanics.php?deleted=1");
+        exit();
     } else {
-        $message = "Failed to add mechanic.";
+        $message = "Failed to delete mechanic.";
+    }
+}
+
+if (isset($_GET['deleted'])) {
+    $message = "Mechanic deleted successfully!";
+}
+
+// ADD MECHANIC
+if (isset($_POST['add_mechanic'])) {
+    $name = trim($_POST['name']);
+    $phone = trim($_POST['phone']);
+
+    if ($name !== '') {
+        $stmt = $conn->prepare("INSERT INTO mechanics (name, phone) VALUES (?, ?)");
+        $stmt->bind_param("ss", $name, $phone);
+
+        if ($stmt->execute()) {
+            $message = "Mechanic added successfully!";
+        } else {
+            $message = "Failed to add mechanic.";
+        }
+    } else {
+        $message = "Please enter a mechanic name.";
     }
 }
 
@@ -28,7 +53,6 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
 <!DOCTYPE html>
 <html>
 <head>
-    <th>Action</th>
     <title>Mechanic Management</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -52,7 +76,9 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
         <p>Manage your registered mechanics.</p>
     </div>
 
-    <?php if (isset($message)) echo "<p>" . htmlspecialchars($message) . "</p><br>"; ?>
+    <?php if ($message != "") { ?>
+        <p><?php echo htmlspecialchars($message); ?></p><br>
+    <?php } ?>
 
     <div class="card">
         <h3>Add New Mechanic</h3><br>
@@ -62,9 +88,6 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
             <input type="text" name="phone" placeholder="Phone Number">
             <button type="submit" name="add_mechanic">Add Mechanic</button>
         </form>
-        <td>
-    <a href="edit_mechanic.php?id=<?php echo $row['mechanic_id']; ?>">Edit</a>
-</td>
     </div>
 
     <br>
@@ -77,6 +100,7 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
                 <th>ID</th>
                 <th>Name</th>
                 <th>Phone</th>
+                <th>Action</th>
             </tr>
 
             <?php while ($row = $result->fetch_assoc()) { ?>
@@ -85,19 +109,17 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
                 <td><?php echo htmlspecialchars($row['name']); ?></td>
                 <td><?php echo htmlspecialchars($row['phone'] ?? ''); ?></td>
                 <td>
-    <a href="edit_mechanic.php?id=<?php echo $row['mechanic_id']; ?>">Edit</a>
-</td>
+                    <a href="edit_mechanic.php?id=<?php echo $row['mechanic_id']; ?>" style="margin-right: 10px;">Edit</a>
 
-<form method="POST" action="delete_mechanic.php"
-      onsubmit="return confirm('Are you sure you want to delete this mechanic?');">
-
-    <input type="hidden" name="mechanic_id"
-           value="<?php echo $row['mechanic_id']; ?>">
-
-    <button type="submit" name="delete">Delete</button>
-
-</form>
-
+                    <form method="POST" style="display:inline;"
+                        onsubmit="return confirm('Are you sure you want to delete this mechanic?');">
+                        <input type="hidden" name="mechanic_id" value="<?php echo $row['mechanic_id']; ?>">
+                        <button type="submit" name="delete_mechanic"
+                            style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer;">
+                            Delete
+                        </button>
+                    </form>
+                </td>
             </tr>
             <?php } ?>
         </table>

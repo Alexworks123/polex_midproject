@@ -1,18 +1,33 @@
-
 <?php
 session_start();
+include 'DatabaseConnection.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
+
+$operator_name = isset($_SESSION['name']) ? $_SESSION['name'] : 'Operator';
+
+$vehicle_result = $conn->query("SELECT COUNT(*) AS total FROM vehicles");
+$total_vehicles = $vehicle_result->fetch_assoc()['total'] ?? 0;
+
+
+$mechanic_result = $conn->query("SELECT COUNT(*) AS total FROM mechanics");
+$total_mechanics = $mechanic_result->fetch_assoc()['total'] ?? 0;
+
+$service_result = $conn->query("SELECT COUNT(*) AS total FROM service_jobs");
+$total_services = $service_result->fetch_assoc()['total'] ?? 0;
+
+$maintenance_result = $conn->query("SELECT COUNT(*) AS total FROM maintenance_schedules WHERE status = 'Due'");
+$total_due_maintenance = $maintenance_result->fetch_assoc()['total'] ?? 0;
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
     <title>Vehicle Maintenance Dashboard</title>
-   <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -31,7 +46,7 @@ if (!isset($_SESSION['user_id'])) {
 <div class="main">
 
     <div class="header">
-        <h2>Welcome, <?php echo htmlspecialchars($_SESSION['name']); ?>!</h2>
+        <h2>Welcome, <?php echo htmlspecialchars($operator_name); ?>!</h2>
         <p>Operator Dashboard</p>
     </div>
 
@@ -39,22 +54,22 @@ if (!isset($_SESSION['user_id'])) {
 
         <div class="card">
             <h3>Total Vehicles</h3>
-            <p>0</p>
+            <p><?php echo number_format($total_vehicles); ?></p>
         </div>
 
         <div class="card">
             <h3>Total Mechanics</h3>
-            <p>0</p>
+            <p><?php echo number_format($total_mechanics); ?></p>
         </div>
 
         <div class="card">
             <h3>Service Jobs</h3>
-            <p>0</p>
+            <p><?php echo number_format($total_services); ?></p>
         </div>
 
         <div class="card">
             <h3>Due Maintenance</h3>
-            <p>0</p>
+            <p><?php echo number_format($total_due_maintenance); ?></p>
         </div>
 
     </div>

@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 include 'DatabaseConnection.php';
@@ -8,15 +7,34 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+$message = "";
+
+// DELETE PART (Optional self-contained deletion or via external script)
+if (isset($_POST['delete_part'])) {
+    $part_id = (int) $_POST['part_id'];
+
+    $stmt = $conn->prepare("DELETE FROM parts WHERE part_id = ?");
+    $stmt->bind_param("i", $part_id);
+
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        header("Location: parts.php?deleted=1");
+        exit();
+    } else {
+        $message = "Failed to delete part.";
+    }
+}
+
+if (isset($_GET['deleted'])) {
+    $message = "Part deleted successfully!";
+}
+
 // ADD NEW PART
 if (isset($_POST['add_part'])) {
-
     $part_name = trim($_POST['part_name']);
     $quantity = (int) $_POST['quantity'];
     $unit_cost = (float) $_POST['unit_cost'];
 
     if ($part_name !== '' && $quantity >= 0 && $unit_cost >= 0) {
-
         $stmt = $conn->prepare(
             "INSERT INTO parts (part_name, quantity, unit_cost)
              VALUES (?, ?, ?)"
@@ -29,7 +47,6 @@ if (isset($_POST['add_part'])) {
         } else {
             $message = "Failed to add part.";
         }
-
     } else {
         $message = "Please enter valid part information.";
     }
@@ -37,7 +54,6 @@ if (isset($_POST['add_part'])) {
 
 // GET ALL PARTS
 $result = $conn->query("SELECT * FROM parts ORDER BY part_id DESC");
-
 ?>
 
 <!DOCTYPE html>
@@ -50,7 +66,6 @@ $result = $conn->query("SELECT * FROM parts ORDER BY part_id DESC");
 
 <div class="sidebar">
     <h2>Vehicle System</h2>
-
     <a href="dashboard.php">Dashboard</a>
     <a href="vehicles.php">Vehicles</a>
     <a href="mechanics.php">Mechanics</a>
@@ -67,7 +82,7 @@ $result = $conn->query("SELECT * FROM parts ORDER BY part_id DESC");
         <p>Manage vehicle parts and inventory.</p>
     </div>
 
-    <?php if (isset($message)) { ?>
+    <?php if ($message != "") { ?>
         <p><?php echo htmlspecialchars($message); ?></p>
     <?php } ?>
 
@@ -76,7 +91,6 @@ $result = $conn->query("SELECT * FROM parts ORDER BY part_id DESC");
         <br>
 
         <form method="POST">
-
             <input
                 type="text"
                 name="part_name"
@@ -106,80 +120,49 @@ $result = $conn->query("SELECT * FROM parts ORDER BY part_id DESC");
             <button type="submit" name="add_part">
                 Add Part
             </button>
-
         </form>
     </div>
 
     <br>
 
     <div class="card">
-
         <h3>Parts Inventory</h3>
         <br>
 
         <table width="100%" border="1" cellpadding="10">
-
             <tr>
                 <th>ID</th>
                 <th>Part Name</th>
                 <th>Available Quantity</th>
                 <th>Unit Cost</th>
-               <th>Total Value</th>
-<th>Action</th>
+                <th>Total Value</th>
+                <th>Action</th>
             </tr>
 
             <?php while ($row = $result->fetch_assoc()) { ?>
-
             <tr>
-
+                <td><?php echo $row['part_id']; ?></td>
+                <td><?php echo htmlspecialchars($row['part_name']); ?></td>
+                <td><?php echo $row['quantity']; ?></td>
+                <td>₱<?php echo number_format($row['unit_cost'], 2); ?></td>
+                <td>₱<?php echo number_format($row['quantity'] * $row['unit_cost'], 2); ?></td>
                 <td>
-                    <?php echo $row['part_id']; ?>
+                    <a href="edit_part.php?id=<?php echo $row['part_id']; ?>" style="margin-right: 10px;">
+                        Edit
+                    </a>
+
+                    <form method="POST" style="display:inline;"
+                        onsubmit="return confirm('Are you sure you want to delete this part?');">
+                        <input type="hidden" name="part_id" value="<?php echo $row['part_id']; ?>">
+                        <button type="submit" name="delete_part"
+                            style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer;">
+                            Delete
+                        </button>
+                    </form>
                 </td>
-
-                <td>
-                    <?php echo htmlspecialchars($row['part_name']); ?>
-                </td>
-
-                <td>
-                    <?php echo $row['quantity']; ?>
-                </td>
-
-                <td>
-                    ₱<?php echo number_format($row['unit_cost'], 2); ?>
-                </td>
-
-                <td>
-                    ₱<?php echo number_format(
-                        $row['quantity'] * $row['unit_cost'], 2
-                    ); ?>
-                </td>
-
-<td>
-
-    <a href="edit_part.php?id=<?php echo $row['part_id']; ?>">
-        Edit
-    </a>
-
-    <form method="POST" action="delete_part.php"
-        onsubmit="return confirm('Are you sure you want to delete this part?');">
-
-        <input type="hidden" name="part_id"
-            value="<?php echo $row['part_id']; ?>">
-
-        <button type="submit" name="delete">
-            Delete
-        </button>
-
-    </form>
-
-</td>
-
             </tr>
-
             <?php } ?>
-
         </table>
-
     </div>
 
 </div>
