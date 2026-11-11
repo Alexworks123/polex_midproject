@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 
 $message = "";
 
-// DELETE MAINTENANCE SCHEDULE
+
 if (isset($_POST['delete_schedule'])) {
     $schedule_id = (int) $_POST['schedule_id'];
 
@@ -108,12 +108,36 @@ $schedules = $conn->query("
 <head>
     <title>Maintenance Management</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Header Banner Style (matching Dashboard design) */
+        .header-banner {
+            background-color: #10192d; /* Dark blue/navy shade */
+            color: #ffffff;
+            padding: 24px 30px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-banner h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .header-banner p {
+            margin: 6px 0 0 0;
+            font-size: 14px;
+            color: #94a3b8; /* Muted gray text */
+        }
+    </style>
 </head>
 
 <body>
 
 <div class="sidebar">
-    <h2>Vehicle System</h2>
+    <h2>Vehicle Maintenance</h2>
     <a href="dashboard.php">Dashboard</a>
     <a href="vehicles.php">Vehicles</a>
     <a href="mechanics.php">Mechanics</a>
@@ -125,7 +149,8 @@ $schedules = $conn->query("
 
 <div class="main">
 
-    <div class="header">
+    <!-- Header styled like the Dashboard banner -->
+    <div class="header-banner">
         <h2>Maintenance Management</h2>
         <p>Manage preventive maintenance schedules.</p>
     </div>

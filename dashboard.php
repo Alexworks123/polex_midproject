@@ -12,7 +12,6 @@ $operator_name = isset($_SESSION['name']) ? $_SESSION['name'] : 'Operator';
 $vehicle_result = $conn->query("SELECT COUNT(*) AS total FROM vehicles");
 $total_vehicles = $vehicle_result->fetch_assoc()['total'] ?? 0;
 
-
 $mechanic_result = $conn->query("SELECT COUNT(*) AS total FROM mechanics");
 $total_mechanics = $mechanic_result->fetch_assoc()['total'] ?? 0;
 
@@ -28,6 +27,28 @@ $total_due_maintenance = $maintenance_result->fetch_assoc()['total'] ?? 0;
 <head>
     <title>Vehicle Maintenance Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Custom color styling for the header area you highlighted */
+        .main .header {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+            border-bottom: 4px solid #3b82f6;
+        }
+        .main .header h2 {
+            margin: 0 0 5px 0;
+            color: #ffffff;
+            font-size: 24px;
+        }
+        .main .header p {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
 

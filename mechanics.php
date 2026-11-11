@@ -55,6 +55,30 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
 <head>
     <title>Mechanic Management</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Header Banner Style (matching Dashboard design) */
+        .header-banner {
+            background-color: #10192d; /* Dark blue/navy shade */
+            color: #ffffff;
+            padding: 24px 30px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-banner h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .header-banner p {
+            margin: 6px 0 0 0;
+            font-size: 14px;
+            color: #94a3b8; /* Muted gray text */
+        }
+    </style>
 </head>
 <body>
 
@@ -71,7 +95,8 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
 
 <div class="main">
 
-    <div class="header">
+    <!-- Header styled like the Dashboard banner -->
+    <div class="header-banner">
         <h2>Mechanic Management</h2>
         <p>Manage your registered mechanics.</p>
     </div>
