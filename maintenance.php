@@ -9,7 +9,6 @@ if (!isset($_SESSION['user_id'])) {
 
 $message = "";
 
-
 if (isset($_POST['delete_schedule'])) {
     $schedule_id = (int) $_POST['schedule_id'];
 
@@ -32,7 +31,6 @@ if (isset($_GET['deleted'])) {
     $message = "Maintenance schedule deleted successfully!";
 }
 
-// ADD MAINTENANCE SCHEDULE
 if (isset($_POST['add_schedule'])) {
     $vehicle_id = (int) $_POST['vehicle_id'];
     $service_type = trim($_POST['service_type']);
@@ -42,8 +40,10 @@ if (isset($_POST['add_schedule'])) {
     $next_due_odometer = !empty($_POST['next_due_odometer']) ? (int) $_POST['next_due_odometer'] : null;
     $next_due_date = !empty($_POST['next_due_date']) ? $_POST['next_due_date'] : null;
 
-    if ($interval_km === null && $interval_days === null) {
-        $message = "Please enter a KM or day interval.";
+    if ($vehicle_id <= 0 || $service_type === '') {
+        $message = "Please select a vehicle and enter a maintenance type.";
+    } elseif ($interval_km === null && $interval_days === null && $next_due_odometer === null && $next_due_date === null) {
+        $message = "Please enter at least one interval or due target (KM or Date).";
     } else {
         $stmt = $conn->prepare("
             INSERT INTO maintenance_schedules
@@ -70,14 +70,12 @@ if (isset($_POST['add_schedule'])) {
     }
 }
 
-// GET VEHICLES
 $vehicles = $conn->query("
     SELECT vehicle_id, plate_number, make, model
     FROM vehicles
     ORDER BY vehicle_id DESC
 ");
 
-// AUTOMATIC MAINTENANCE STATUS
 $conn->query("
     UPDATE maintenance_schedules m
     JOIN vehicles v ON m.vehicle_id = v.vehicle_id
@@ -94,7 +92,6 @@ $conn->query("
     END
 ");
 
-// GET MAINTENANCE RECORDS
 $schedules = $conn->query("
     SELECT m.*, v.plate_number, v.odometer AS current_odometer
     FROM maintenance_schedules m
@@ -109,9 +106,8 @@ $schedules = $conn->query("
     <title>Maintenance Management</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Header Banner Style (matching Dashboard design) */
         .header-banner {
-            background-color: #10192d; /* Dark blue/navy shade */
+            background-color: #10192d;
             color: #ffffff;
             padding: 24px 30px;
             border-radius: 12px;
@@ -129,7 +125,37 @@ $schedules = $conn->query("
         .header-banner p {
             margin: 6px 0 0 0;
             font-size: 14px;
-            color: #94a3b8; /* Muted gray text */
+            color: #94a3b8;
+        }
+
+        .alert {
+            padding: 12px 20px;
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .badge-due {
+            background-color: #dc3545;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .badge-upcoming {
+            background-color: #28a745;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -149,14 +175,15 @@ $schedules = $conn->query("
 
 <div class="main">
 
-    <!-- Header styled like the Dashboard banner -->
     <div class="header-banner">
         <h2>Maintenance Management</h2>
         <p>Manage preventive maintenance schedules.</p>
     </div>
 
     <?php if ($message != "") { ?>
-        <p><?php echo htmlspecialchars($message); ?></p>
+        <div class="alert <?php echo (strpos($message, 'successfully') !== false) ? 'alert-success' : ''; ?>">
+            <?php echo htmlspecialchars($message); ?>
+        </div>
     <?php } ?>
 
     <div class="card">
@@ -209,16 +236,18 @@ $schedules = $conn->query("
                 <th>Action</th>
             </tr>
 
-            <?php while ($row = $schedules->fetch_assoc()) { ?>
+            <?php while ($row = $schedules->fetch_assoc()) { 
+                $statusClass = ($row['status'] === 'Due') ? 'badge-due' : 'badge-upcoming';
+            ?>
             <tr>
                 <td><?php echo $row['schedule_id']; ?></td>
                 <td><?php echo htmlspecialchars($row['plate_number']); ?></td>
                 <td><?php echo htmlspecialchars($row['service_type']); ?></td>
-                <td><?php echo $row['interval_km'] ?? '-'; ?></td>
-                <td><?php echo $row['interval_days'] ?? '-'; ?></td>
-                <td><?php echo $row['next_due_odometer'] ?? '-'; ?></td>
+                <td><?php echo $row['interval_km'] ? number_format($row['interval_km']) . ' km' : '-'; ?></td>
+                <td><?php echo $row['interval_days'] ? $row['interval_days'] . ' days' : '-'; ?></td>
+                <td><?php echo $row['next_due_odometer'] ? number_format($row['next_due_odometer']) . ' km' : '-'; ?></td>
                 <td><?php echo $row['next_due_date'] ?? '-'; ?></td>
-                <td><?php echo htmlspecialchars($row['status']); ?></td>
+                <td><span class="<?php echo $statusClass; ?>"><?php echo htmlspecialchars($row['status']); ?></span></td>
                 <td>
                     <a href="edit_maintenance.php?id=<?php echo $row['schedule_id']; ?>" style="margin-right: 10px;">Edit</a>
                     

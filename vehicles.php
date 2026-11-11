@@ -9,18 +9,17 @@ if (!isset($_SESSION['user_id'])) {
 
 $message = "";
 
-// DELETE VEHICLE
 if (isset($_POST['delete_vehicle'])) {
     $vehicle_id = (int) $_POST['vehicle_id'];
 
     $stmt = $conn->prepare("DELETE FROM vehicles WHERE vehicle_id = ?");
     $stmt->bind_param("i", $vehicle_id);
 
-    if ($stmt->execute()) {
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
         header("Location: vehicles.php?deleted=1");
         exit();
     } else {
-        $message = "Failed to delete vehicle. It may be linked to service jobs or maintenance schedules.";
+        $message = "Failed to delete vehicle.";
     }
 }
 
@@ -28,25 +27,36 @@ if (isset($_GET['deleted'])) {
     $message = "Vehicle deleted successfully!";
 }
 
-// ADD VEHICLE
 if (isset($_POST['add_vehicle'])) {
-    $plate = trim($_POST['plate_number']);
+    $plate_number = trim($_POST['plate_number']);
     $make = trim($_POST['make']);
     $model = trim($_POST['model']);
-    $year = !empty($_POST['year']) ? (int) $_POST['year'] : null;
+    $year = (int) $_POST['year'];
     $odometer = (int) $_POST['odometer'];
 
-    if ($plate !== '' && $make !== '' && $model !== '') {
-        $stmt = $conn->prepare("INSERT INTO vehicles (plate_number, make, model, year, odometer) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssii", $plate, $make, $model, $year, $odometer);
+    if ($plate_number !== '' && $make !== '' && $model !== '' && $year > 1900 && $odometer >= 0) {
+        $check_stmt = $conn->prepare("SELECT vehicle_id FROM vehicles WHERE plate_number = ?");
+        $check_stmt->bind_param("s", $plate_number);
+        $check_stmt->execute();
+        $check_result = $check_stmt->get_result();
 
-        if ($stmt->execute()) {
-            $message = "Vehicle added successfully!";
+        if ($check_result->num_rows > 0) {
+            $message = "Error: Plate Number / Fleet ID already exists! (BR1 Violation)";
         } else {
-            $message = "Failed to add vehicle. Plate number may already exist.";
+            $stmt = $conn->prepare(
+                "INSERT INTO vehicles (plate_number, make, model, year, odometer)
+                 VALUES (?, ?, ?, ?, ?)"
+            );
+            $stmt->bind_param("sssii", $plate_number, $make, $model, $year, $odometer);
+
+            if ($stmt->execute()) {
+                $message = "Vehicle added successfully!";
+            } else {
+                $message = "Failed to add vehicle.";
+            }
         }
     } else {
-        $message = "Please fill in all required fields.";
+        $message = "Please enter valid vehicle information.";
     }
 }
 
@@ -59,9 +69,8 @@ $result = $conn->query("SELECT * FROM vehicles ORDER BY vehicle_id DESC");
     <title>Vehicle Management</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Header Banner Style (matching Dashboard design) */
         .header-banner {
-            background-color: #10192d; /* Dark blue/navy shade */
+            background-color: #10192d;
             color: #ffffff;
             padding: 24px 30px;
             border-radius: 12px;
@@ -79,7 +88,22 @@ $result = $conn->query("SELECT * FROM vehicles ORDER BY vehicle_id DESC");
         .header-banner p {
             margin: 6px 0 0 0;
             font-size: 14px;
-            color: #94a3b8; /* Muted gray text */
+            color: #94a3b8;
+        }
+
+        .alert {
+            padding: 12px 20px;
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
         }
     </style>
 </head>
@@ -98,34 +122,73 @@ $result = $conn->query("SELECT * FROM vehicles ORDER BY vehicle_id DESC");
 
 <div class="main">
 
-    <!-- Header styled like the Dashboard banner -->
     <div class="header-banner">
         <h2>Vehicle Management</h2>
         <p>Manage your registered vehicles.</p>
     </div>
 
     <?php if ($message != "") { ?>
-        <p><?php echo htmlspecialchars($message); ?></p><br>
+        <div class="alert <?php echo (strpos($message, 'successfully') !== false) ? 'alert-success' : ''; ?>">
+            <?php echo htmlspecialchars($message); ?>
+        </div>
     <?php } ?>
 
     <div class="card">
-        <h3>Add New Vehicle</h3><br>
+        <h3>Add New Vehicle</h3>
+        <br>
 
         <form method="POST">
-            <input type="text" name="plate_number" placeholder="Plate Number / Fleet ID" required>
-            <input type="text" name="make" placeholder="Vehicle Make" required>
-            <input type="text" name="model" placeholder="Vehicle Model" required>
-            <input type="number" name="year" placeholder="Year" min="1900" max="2100">
-            <input type="number" name="odometer" placeholder="Odometer (KM)" min="0" value="0" required>
+            <input
+                type="text"
+                name="plate_number"
+                placeholder="Plate Number / Fleet ID"
+                required
+            >
+
+            <input
+                type="text"
+                name="make"
+                placeholder="Vehicle Make"
+                required
+            >
+
+            <input
+                type="text"
+                name="model"
+                placeholder="Vehicle Model"
+                required
+            >
+
+            <input
+                type="number"
+                name="year"
+                placeholder="Year"
+                min="1900"
+                max="2099"
+                required
+            >
+
+            <input
+                type="number"
+                name="odometer"
+                placeholder="Odometer (KM)"
+                min="0"
+                required
+            >
+
             <br><br>
-            <button type="submit" name="add_vehicle">Add Vehicle</button>
+
+            <button type="submit" name="add_vehicle">
+                Add Vehicle
+            </button>
         </form>
     </div>
 
     <br>
 
     <div class="card">
-        <h3>Vehicle List</h3><br>
+        <h3>Vehicle List</h3>
+        <br>
 
         <table width="100%" border="1" cellpadding="10">
             <tr>
@@ -144,10 +207,12 @@ $result = $conn->query("SELECT * FROM vehicles ORDER BY vehicle_id DESC");
                 <td><?php echo htmlspecialchars($row['plate_number']); ?></td>
                 <td><?php echo htmlspecialchars($row['make']); ?></td>
                 <td><?php echo htmlspecialchars($row['model']); ?></td>
-                <td><?php echo htmlspecialchars($row['year'] ?? ''); ?></td>
+                <td><?php echo $row['year']; ?></td>
                 <td><?php echo number_format($row['odometer']); ?> km</td>
                 <td>
-                    <a href="edit_vehicle.php?id=<?php echo $row['vehicle_id']; ?>" style="margin-right: 10px;">Edit</a>
+                    <a href="edit_vehicle.php?id=<?php echo $row['vehicle_id']; ?>" style="margin-right: 10px;">
+                        Edit
+                    </a>
 
                     <form method="POST" style="display:inline;"
                         onsubmit="return confirm('Are you sure you want to delete this vehicle?');">
@@ -164,5 +229,6 @@ $result = $conn->query("SELECT * FROM vehicles ORDER BY vehicle_id DESC");
     </div>
 
 </div>
+
 </body>
 </html>

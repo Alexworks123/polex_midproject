@@ -9,7 +9,6 @@ if (!isset($_SESSION['user_id'])) {
 
 $message = "";
 
-// DELETE PART (Optional self-contained deletion or via external script)
 if (isset($_POST['delete_part'])) {
     $part_id = (int) $_POST['part_id'];
 
@@ -28,18 +27,17 @@ if (isset($_GET['deleted'])) {
     $message = "Part deleted successfully!";
 }
 
-// ADD NEW PART
 if (isset($_POST['add_part'])) {
     $part_name = trim($_POST['part_name']);
     $quantity = (int) $_POST['quantity'];
     $unit_cost = (float) $_POST['unit_cost'];
 
     if ($part_name !== '' && $quantity >= 0 && $unit_cost >= 0) {
-        $stmt = $conn->prepare(
-            "INSERT INTO parts (part_name, quantity, unit_cost)
-             VALUES (?, ?, ?)"
-        );
-
+        
+      $stmt = $conn->prepare(
+    "INSERT INTO parts (part_name, quantity, unit_cost)
+     VALUES (?, ?, ?)"
+);
         $stmt->bind_param("sid", $part_name, $quantity, $unit_cost);
 
         if ($stmt->execute()) {
@@ -52,7 +50,6 @@ if (isset($_POST['add_part'])) {
     }
 }
 
-// GET ALL PARTS
 $result = $conn->query("SELECT * FROM parts ORDER BY part_id DESC");
 ?>
 
@@ -62,9 +59,8 @@ $result = $conn->query("SELECT * FROM parts ORDER BY part_id DESC");
     <title>Parts Management</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Header Banner Style (matching Dashboard design) */
         .header-banner {
-            background-color: #10192d; /* Dark blue/navy shade */
+            background-color: #10192d;
             color: #ffffff;
             padding: 24px 30px;
             border-radius: 12px;
@@ -82,7 +78,7 @@ $result = $conn->query("SELECT * FROM parts ORDER BY part_id DESC");
         .header-banner p {
             margin: 6px 0 0 0;
             font-size: 14px;
-            color: #94a3b8; /* Muted gray text */
+            color: #94a3b8;
         }
     </style>
 </head>
@@ -101,7 +97,6 @@ $result = $conn->query("SELECT * FROM parts ORDER BY part_id DESC");
 
 <div class="main">
 
-    <!-- Header styled like the Dashboard banner -->
     <div class="header-banner">
         <h2>Parts Management</h2>
         <p>Manage vehicle parts and inventory.</p>
@@ -164,13 +159,17 @@ $result = $conn->query("SELECT * FROM parts ORDER BY part_id DESC");
                 <th>Action</th>
             </tr>
 
-            <?php while ($row = $result->fetch_assoc()) { ?>
+            <?php while ($row = $result->fetch_assoc()) { 
+                $qty = $row['quantity'] ?? $row['available_quantity'] ?? 0;
+                $cost = $row['unit_cost'] ?? $row['price'] ?? 0.00;
+                $total = $qty * $cost;
+            ?>
             <tr>
                 <td><?php echo $row['part_id']; ?></td>
                 <td><?php echo htmlspecialchars($row['part_name']); ?></td>
-                <td><?php echo $row['quantity']; ?></td>
-                <td>₱<?php echo number_format($row['unit_cost'], 2); ?></td>
-                <td>₱<?php echo number_format($row['quantity'] * $row['unit_cost'], 2); ?></td>
+                <td><?php echo (int) $qty; ?></td>
+                <td>₱<?php echo number_format((float) $cost, 2); ?></td>
+                <td>₱<?php echo number_format((float) $total, 2); ?></td>
                 <td>
                     <a href="edit_part.php?id=<?php echo $row['part_id']; ?>" style="margin-right: 10px;">
                         Edit

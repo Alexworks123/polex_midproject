@@ -9,14 +9,13 @@ if (!isset($_SESSION['user_id'])) {
 
 $message = "";
 
-// DELETE MECHANIC
 if (isset($_POST['delete_mechanic'])) {
     $mechanic_id = (int) $_POST['mechanic_id'];
 
     $stmt = $conn->prepare("DELETE FROM mechanics WHERE mechanic_id = ?");
     $stmt->bind_param("i", $mechanic_id);
 
-    if ($stmt->execute()) {
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
         header("Location: mechanics.php?deleted=1");
         exit();
     } else {
@@ -28,12 +27,11 @@ if (isset($_GET['deleted'])) {
     $message = "Mechanic deleted successfully!";
 }
 
-// ADD MECHANIC
 if (isset($_POST['add_mechanic'])) {
     $name = trim($_POST['name']);
     $phone = trim($_POST['phone']);
 
-    if ($name !== '') {
+    if ($name !== '' && $phone !== '') {
         $stmt = $conn->prepare("INSERT INTO mechanics (name, phone) VALUES (?, ?)");
         $stmt->bind_param("ss", $name, $phone);
 
@@ -43,7 +41,7 @@ if (isset($_POST['add_mechanic'])) {
             $message = "Failed to add mechanic.";
         }
     } else {
-        $message = "Please enter a mechanic name.";
+        $message = "Please enter valid mechanic details.";
     }
 }
 
@@ -56,9 +54,8 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
     <title>Mechanic Management</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Header Banner Style (matching Dashboard design) */
         .header-banner {
-            background-color: #10192d; /* Dark blue/navy shade */
+            background-color: #10192d;
             color: #ffffff;
             padding: 24px 30px;
             border-radius: 12px;
@@ -76,7 +73,22 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
         .header-banner p {
             margin: 6px 0 0 0;
             font-size: 14px;
-            color: #94a3b8; /* Muted gray text */
+            color: #94a3b8;
+        }
+
+        .alert {
+            padding: 12px 20px;
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
         }
     </style>
 </head>
@@ -95,30 +107,49 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
 
 <div class="main">
 
-    <!-- Header styled like the Dashboard banner -->
     <div class="header-banner">
         <h2>Mechanic Management</h2>
         <p>Manage your registered mechanics.</p>
     </div>
 
     <?php if ($message != "") { ?>
-        <p><?php echo htmlspecialchars($message); ?></p><br>
+        <div class="alert <?php echo (strpos($message, 'successfully') !== false) ? 'alert-success' : ''; ?>">
+            <?php echo htmlspecialchars($message); ?>
+        </div>
     <?php } ?>
 
     <div class="card">
-        <h3>Add New Mechanic</h3><br>
+        <h3>Add New Mechanic</h3>
+        <br>
 
         <form method="POST">
-            <input type="text" name="name" placeholder="Mechanic Name" required>
-            <input type="text" name="phone" placeholder="Phone Number">
-            <button type="submit" name="add_mechanic">Add Mechanic</button>
+            <input
+                type="text"
+                name="name"
+                placeholder="Mechanic Name"
+                required
+            >
+
+            <input
+                type="text"
+                name="phone"
+                placeholder="Phone Number"
+                required
+            >
+
+            <br><br>
+
+            <button type="submit" name="add_mechanic">
+                Add Mechanic
+            </button>
         </form>
     </div>
 
     <br>
 
     <div class="card">
-        <h3>Mechanic List</h3><br>
+        <h3>Mechanic List</h3>
+        <br>
 
         <table width="100%" border="1" cellpadding="10">
             <tr>
@@ -132,9 +163,11 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
             <tr>
                 <td><?php echo $row['mechanic_id']; ?></td>
                 <td><?php echo htmlspecialchars($row['name']); ?></td>
-                <td><?php echo htmlspecialchars($row['phone'] ?? ''); ?></td>
+                <td><?php echo htmlspecialchars($row['phone']); ?></td>
                 <td>
-                    <a href="edit_mechanic.php?id=<?php echo $row['mechanic_id']; ?>" style="margin-right: 10px;">Edit</a>
+                    <a href="edit_mechanic.php?id=<?php echo $row['mechanic_id']; ?>" style="margin-right: 10px;">
+                        Edit
+                    </a>
 
                     <form method="POST" style="display:inline;"
                         onsubmit="return confirm('Are you sure you want to delete this mechanic?');">
@@ -151,5 +184,6 @@ $result = $conn->query("SELECT * FROM mechanics ORDER BY mechanic_id DESC");
     </div>
 
 </div>
+
 </body>
 </html>

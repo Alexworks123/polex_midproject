@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 include 'DatabaseConnection.php';
@@ -9,7 +8,6 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $message = "";
-
 
 if (isset($_POST['add_job_part'])) {
 
@@ -24,7 +22,6 @@ if (isset($_POST['add_job_part'])) {
         try {
             $conn->begin_transaction();
 
-            // CHECK SERVICE JOB
             $jobCheck = $conn->prepare(
                 "SELECT job_id FROM service_jobs WHERE job_id = ?"
             );
@@ -36,7 +33,6 @@ if (isset($_POST['add_job_part'])) {
                 throw new Exception("Service job not found.");
             }
 
-            // GET PART AND LOCK INVENTORY ROW
             $partCheck = $conn->prepare(
                 "SELECT quantity, unit_cost
                  FROM parts
@@ -53,14 +49,12 @@ if (isset($_POST['add_job_part'])) {
                 throw new Exception("Part not found.");
             }
 
-            // CHECK AVAILABLE STOCK
             if ($quantity > $part['quantity']) {
                 throw new Exception("Not enough available stock!");
             }
 
             $unit_cost = $part['unit_cost'];
 
-            // SAVE PART TO SERVICE JOB
             $stmt = $conn->prepare(
                 "INSERT INTO job_parts
                  (job_id, part_id, quantity, unit_cost)
@@ -77,7 +71,6 @@ if (isset($_POST['add_job_part'])) {
 
             $stmt->execute();
 
-            // DEDUCT INVENTORY
             $update = $conn->prepare(
                 "UPDATE parts
                  SET quantity = quantity - ?
@@ -99,7 +92,6 @@ if (isset($_POST['add_job_part'])) {
     }
 }
 
-// GET SERVICE JOBS
 $jobs = $conn->query("
     SELECT sj.job_id, sj.service_date, sj.service_type,
            v.plate_number, v.make, v.model
@@ -108,7 +100,6 @@ $jobs = $conn->query("
     ORDER BY sj.job_id DESC
 ");
 
-// GET AVAILABLE PARTS
 $parts = $conn->query("
     SELECT part_id, part_name, quantity, unit_cost
     FROM parts
@@ -116,7 +107,6 @@ $parts = $conn->query("
     ORDER BY part_name ASC
 ");
 
-// GET PARTS USED IN SERVICE JOBS
 $records = $conn->query("
     SELECT jp.quantity, jp.unit_cost,
            sj.job_id, sj.service_date,
@@ -134,11 +124,49 @@ $records = $conn->query("
 <head>
     <title>Add Parts to Service Job</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .header-banner {
+            background-color: #10192d;
+            color: #ffffff;
+            padding: 24px 30px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-banner h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .header-banner p {
+            margin: 6px 0 0 0;
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        .alert {
+            padding: 12px 20px;
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+    </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h2>Vehicle System</h2>
+    <h2>Vehicle Maintenance</h2>
 
     <a href="dashboard.php">Dashboard</a>
     <a href="vehicles.php">Vehicles</a>
@@ -151,14 +179,15 @@ $records = $conn->query("
 
 <div class="main">
 
-    <div class="header">
+    <div class="header-banner">
         <h2>Parts Used in Service Jobs</h2>
         <p>Assign vehicle parts to service records.</p>
     </div>
 
     <?php if ($message != "") { ?>
-        <p><?php echo htmlspecialchars($message); ?></p>
-        <br>
+        <div class="alert <?php echo (strpos($message, 'successfully') !== false) ? 'alert-success' : ''; ?>">
+            <?php echo htmlspecialchars($message); ?>
+        </div>
     <?php } ?>
 
     <div class="card">
