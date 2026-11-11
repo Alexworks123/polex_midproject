@@ -1,3 +1,8 @@
+This error occurs because your `parts` database table uses the column name `quantity` instead of `available_quantity`. When the script tries to update stock using `UPDATE parts SET available_quantity = ...`, MySQL fails because `available_quantity` doesn't exist in your table.
+
+Here is the complete, fixed `services.php` code where all column references are set to `quantity`:
+
+```php
 <?php
 session_start();
 include 'DatabaseConnection.php';
@@ -33,23 +38,55 @@ if (isset($_POST['add_job'])) {
     $service_date = $_POST['service_date'];
     $odometer = (int) $_POST['odometer'];
     $service_type = trim($_POST['service_type']);
-    $description = trim($_POST['description']);
+    $part_id = isset($_POST['part_id']) && $_POST['part_id'] !== '' ? (int) $_POST['part_id'] : null;
+    $part_qty = isset($_POST['part_qty']) ? (int) $_POST['part_qty'] : 1;
     $status = trim($_POST['status']);
 
     if ($vehicle_id > 0 && $mechanic_id > 0 && !empty($service_date) && strtotime($service_date) !== false && $odometer >= 0 && $service_type !== '') {
         $valid_date = date('Y-m-d', strtotime($service_date));
 
-        $stmt = $conn->prepare(
-            "INSERT INTO service_jobs (vehicle_id, mechanic_id, service_date, odometer, service_type, description, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?)"
-        );
-        $stmt->bind_param("iisisss", $vehicle_id, $mechanic_id, $valid_date, $odometer, $service_type, $description, $status);
+        try {
+            $conn->begin_transaction();
 
-        if ($stmt->execute()) {
+            $stmt = $conn->prepare(
+                "INSERT INTO service_jobs (vehicle_id, mechanic_id, service_date, odometer, service_type, status)
+                 VALUES (?, ?, ?, ?, ?, ?)"
+            );
+            $stmt->bind_param("iisiss", $vehicle_id, $mechanic_id, $valid_date, $odometer, $service_type, $status);
+            $stmt->execute();
+            $new_job_id = $conn->insert_id;
+
+            if ($part_id !== null && $part_id > 0) {
+                $partCheck = $conn->prepare("SELECT quantity, unit_cost FROM parts WHERE part_id = ? FOR UPDATE");
+                $partCheck->bind_param("i", $part_id);
+                $partCheck->execute();
+                $partRes = $partCheck->get_result()->fetch_assoc();
+
+                if ($partRes) {
+                    $available = (int) $partRes['quantity'];
+                    if ($available >= $part_qty) {
+                        $unit_cost = (float) ($partRes['unit_cost'] ?? 0);
+
+                        $jpStmt = $conn->prepare("INSERT INTO job_parts (job_id, part_id, quantity, unit_cost) VALUES (?, ?, ?, ?)");
+                        $jpStmt->bind_param("iiid", $new_job_id, $part_id, $part_qty, $unit_cost);
+                        $jpStmt->execute();
+
+                        $updatePart = $conn->prepare("UPDATE parts SET quantity = quantity - ? WHERE part_id = ?");
+                        $updatePart->bind_param("ii", $part_qty, $part_id);
+                        $updatePart->execute();
+                    } else {
+                        throw new Exception("Selected part does not have enough stock available.");
+                    }
+                }
+            }
+
             $conn->query("UPDATE vehicles SET odometer = $odometer WHERE vehicle_id = $vehicle_id AND odometer < $odometer");
+
+            $conn->commit();
             $message = "Service job added successfully!";
-        } else {
-            $message = "Failed to add service job.";
+        } catch (Throwable $e) {
+            $conn->rollback();
+            $message = "Error: " . $e->getMessage();
         }
     } else {
         $message = "Please enter valid service job information and a valid date.";
@@ -58,11 +95,16 @@ if (isset($_POST['add_job'])) {
 
 $vehicles = $conn->query("SELECT vehicle_id, plate_number, make, model FROM vehicles ORDER BY plate_number ASC");
 $mechanics = $conn->query("SELECT mechanic_id, name FROM mechanics ORDER BY name ASC");
+$available_parts = $conn->query("SELECT * FROM parts ORDER BY part_name ASC");
 
-$query = "SELECT sj.*, v.plate_number, v.make, v.model, m.name AS mechanic_name 
+$query = "SELECT sj.*, v.plate_number, v.make, v.model, m.name AS mechanic_name,
+                 GROUP_CONCAT(CONCAT(p.part_name, ' (x', jp.quantity, ')') SEPARATOR '<br>') AS parts_list
           FROM service_jobs sj
           LEFT JOIN vehicles v ON sj.vehicle_id = v.vehicle_id
           LEFT JOIN mechanics m ON sj.mechanic_id = m.mechanic_id
+          LEFT JOIN job_parts jp ON sj.job_id = jp.job_id
+          LEFT JOIN parts p ON jp.part_id = p.part_id
+          GROUP BY sj.job_id
           ORDER BY sj.job_id DESC";
 $result = $conn->query($query);
 ?>
@@ -166,7 +208,16 @@ $result = $conn->query($query);
 
             <input type="text" name="service_type" placeholder="Service Type (e.g. Change Oil)" required>
 
-            <input type="text" name="description" placeholder="Description">
+            <select name="part_id">
+                <option value="">Select Part (Optional)</option>
+                <?php while ($p = $available_parts->fetch_assoc()) { ?>
+                    <option value="<?php echo $p['part_id']; ?>">
+                        <?php echo htmlspecialchars($p['part_name'] . ' (In Stock: ' . $p['quantity'] . ')'); ?>
+                    </option>
+                <?php } ?>
+            </select>
+
+            <input type="number" name="part_qty" placeholder="Part Qty" value="1" min="1" style="width: 90px;">
 
             <select name="status" required>
                 <option value="Pending">Pending</option>
@@ -196,6 +247,7 @@ $result = $conn->query($query);
                 <th>Date</th>
                 <th>Odometer</th>
                 <th>Service Type</th>
+                <th>Parts Used</th>
                 <th>Status</th>
                 <th>Action</th>
             </tr>
@@ -212,9 +264,10 @@ $result = $conn->query($query);
                 <td><?php echo $formatted_date; ?></td>
                 <td><?php echo number_format($row['odometer']); ?> km</td>
                 <td><?php echo htmlspecialchars($row['service_type']); ?></td>
+                <td><?php echo !empty($row['parts_list']) ? $row['parts_list'] : 'None'; ?></td>
                 <td><?php echo htmlspecialchars($row['status']); ?></td>
                 <td>
-                    <a href="edit_job.php?id=<?php echo $row['job_id']; ?>" style="margin-right: 10px;">
+                    <a href="edit_service.php?id=<?php echo $row['job_id']; ?>" style="margin-right: 10px;">
                         Edit
                     </a>
 
@@ -236,3 +289,4 @@ $result = $conn->query($query);
 
 </body>
 </html>
+
